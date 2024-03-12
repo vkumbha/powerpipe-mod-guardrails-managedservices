@@ -210,12 +210,11 @@ query "zendesk_hold_tickets_count" {
 query "new_and_open_tickets_report" {
   sql = <<-EOQ
     select
-      t.id as "Ticket",
-      substring(t.subject for 100) as "Subject",
       date_part('day', now() - t.created_at) as "Age (Days)",
-      -- date_part('day', now() - t.updated_at) as "Last Update (Days)",
+      t.id as "Ticket",
       t.status as "Status",
-      t.priority as "Priority"
+      -- date_part('day', now() - t.updated_at) as "Last Update (Days)",
+      substring(t.subject for 100) as "Subject"
     from
       zendesk_ticket as t
     where
@@ -229,16 +228,15 @@ query "new_and_open_tickets_report" {
 query "all_unsolved_tickets_report" {
   sql = <<-EOQ
   SELECT
-    t.id AS "Ticket",
-    SUBSTRING(t.subject FOR 100) AS "Subject",
     date_part('day', now() - t.created_at) as "Age (Days)",
-    -- date_part('day', now() - t.updated_at) as "Last Update (Days)",
+    t.id AS "Ticket",
     CASE
       WHEN t.status = 'pending' AND EXISTS (SELECT 1  FROM JSONB_ARRAY_ELEMENTS_TEXT(tags) AS tag WHERE tag = 'customer_action') THEN 'customer_action'
       WHEN t.status = 'pending' AND NOT EXISTS (SELECT 1  FROM JSONB_ARRAY_ELEMENTS_TEXT(tags) AS tag WHERE tag = 'customer_action') THEN 'customer_reply'
       ELSE t.status 
     END AS "Status",
-    t.priority as "Priority"
+    -- date_part('day', now() - t.updated_at) as "Last Update (Days)"
+    SUBSTRING(t.subject FOR 100) AS "Subject"
   FROM
     zendesk_ticket AS t
   WHERE
