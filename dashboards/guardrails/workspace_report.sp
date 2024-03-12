@@ -1,12 +1,20 @@
 dashboard "guardrails_dashboard" {
-
-  title = "Workspace Summary"
+  # title = "Workspace Summary"
 
   tags = {
     service  = "Guardrails"
     plugin   = "guardrails"
     type     = "Report"
     category = "Summary"
+  }
+
+  container {
+
+    card {
+      width = "12"
+      sql   = query.guardrails_organization_name.sql
+      args  = [var.organization_name]
+    }
   }
 
   # Analysis
@@ -31,6 +39,12 @@ dashboard "guardrails_dashboard" {
     }
   }
 
+}
+
+query "guardrails_organization_name" {
+  sql = <<-EOQ
+    SELECT 'Workspace Summary - ' || $1 as " ";
+  EOQ  
 }
 
 query "workspace_version" {
