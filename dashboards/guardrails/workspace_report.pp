@@ -29,21 +29,30 @@ dashboard "guardrails_dashboard" {
       sql   = query.total_te_installations.sql
       width = 3
     }
+
+    card {
+      sql   = query.accounts_total.sql
+      width = 3
+    }
+
+    card {
+      sql   = query.alerts_total.sql
+      width = 3
+    }
   }
 
-  # Analysis
+  # Workspace stats - Accounts, Resources, Controls, Alerts
   container {
     table {
       width = 12
       sql   = query.workspace_stats.sql
     }
   }
-
 }
 
 query "guardrails_organization_name" {
   sql = <<-EOQ
-    SELECT 'Workspace Summary - ' || $1 as " ";
+    SELECT 'Workspaces Summary - ' || $1 as " ";
   EOQ  
 }
 
@@ -83,10 +92,46 @@ query "workspace_count" {
   EOQ
 }
 
+query "accounts_total" {
+  sql = <<-EOQ
+  select
+    sum((output -> 'accounts' -> 'metadata' -> 'stats' ->> 'total')::int) as "Accounts"
+  from
+    guardrails_query
+  where
+    query = '{
+      accounts: resources(filter: "resourceTypeId:tmod:@turbot/turbot#/resource/interfaces/accountable level:self") {
+        metadata {
+          stats {
+            total
+          }
+        }
+      }
+    }'
+  EOQ
+}
+
+query "alerts_total" {
+  sql = <<-EOQ
+  select
+    sum((output -> 'alerts' -> 'metadata' -> 'stats' ->> 'total')::int) as "Alerts - alarm, invalid, error"
+  from
+    guardrails_query
+  where
+    query = '{
+      alerts: controls(filter:"state:alarm,invalid,error") {
+        metadata {
+          stats {
+            total
+          }
+        }
+      }
+    }'
+  EOQ
+}
 
 query "workspace_stats" {
   sql = <<-EOQ
-
   select
     to_char(current_timestamp, 'YYYY-MM-DD') AS "Date",
     workspace as "Workspace",
@@ -102,7 +147,6 @@ query "workspace_stats" {
       teVersion: policySetting(uri: "tmod:@turbot/turbot#/policy/types/workspaceVersion" resourceId: "tmod:@turbot/turbot#/") {
         value
       }
-
       accounts: resources(filter: "resourceTypeId:tmod:@turbot/turbot#/resource/interfaces/accountable level:self") {
         metadata {
           stats {
@@ -110,7 +154,6 @@ query "workspace_stats" {
           }
         }
       }
-
       resources: resources(filter: "resourceTypeId:tmod:@turbot/aws#/resource/types/aws,tmod:@turbot/azure#/resource/types/azure,tmod:@turbot/gcp#/resource/types/gcp") {
         metadata {
           stats {
@@ -118,7 +161,6 @@ query "workspace_stats" {
           }
         }
       }
-
       alerts: controls(filter:"state:alarm,invalid,error") {
         metadata {
           stats {
@@ -126,7 +168,6 @@ query "workspace_stats" {
           }
         }
       }
-
       total_controls: controls {
         metadata {
           stats {
@@ -134,7 +175,6 @@ query "workspace_stats" {
           }
         }
       }
-
     }'
   order by "Workspace"
   EOQ
